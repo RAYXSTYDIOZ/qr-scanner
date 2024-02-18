@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Code Scanner</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="scanner-container">
+        <video id="qr-video" autoplay></video>
+        <canvas id="qr-canvas" width="640" height="480"></canvas>
+    </div>
+    <div id="result"></div>
+
+    <script src="script.js"></script>
+</body>
+</html>
+<style>body {
+    font-family: Arial, sans-serif;
+}
+
+#scanner-container {
+    position: relative;
+    width: 100%;
+    margin: 50px auto;
+}
+
+#qr-video {
+    width: 100%;
+    max-width: 640px;
+    display: block;
+}
+
+#qr-canvas {
+    display: none;
+}</style>
+<script>const video = document.getElementById('qr-video');
+const canvasElement = document.getElementById('qr-canvas');
+const canvas = canvasElement.getContext('2d');
+
+const qrCodeResult = document.getElementById('result');
+
+let scanning = false;
+
+function startScanner() {
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+        .then(function(stream) {
+            video.srcObject = stream;
+            video.setAttribute('playsinline', true);
+            video.play();
+            requestAnimationFrame(tick);
+        })
+        .catch(function(err) {
+            console.error(err);
+        });
+}
+
+function tick() {
+    if (video.readyState === video.HAVE_ENOUGH_DATA) {
+        canvasElement.height = video.videoHeight;
+        canvasElement.width = video.videoWidth;
+        canvas.drawImage(video, 0, 0, canvasElement.width, canvasElement.height);
+        const imageData = canvas.getImageData(0, 0, canvasElement.width, canvasElement.height);
+        const code = jsQR(imageData.data, imageData.width, imageData.height, {
+            inversionAttempts: 'dontInvert',
+        });
+        if (code) {
+            qrCodeResult.innerHTML = 'QR Code detected: ' + code.data;
+            window.location.href = code.data; // Redirect to the URL encoded in the QR code
+        } else {
+            qrCodeResult.innerHTML = 'No QR code detected.';
+        }
+    }
+    if (!scanning) {
+        return;
+    }
+    requestAnimationFrame(tick);
+}
+
+startScanner();
+</script>
